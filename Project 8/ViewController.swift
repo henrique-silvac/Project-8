@@ -103,7 +103,7 @@ class ViewController: UIViewController {
             for colum in 0..<5 {
                 let letterButton = UIButton(type: .system)
                 letterButton.titleLabel?.font = UIFont.systemFont(ofSize: 36)
-                letterButton.setTitle("WWW", for: .normal)
+                letterButton.setTitle("AAA", for: .normal)
                 
                 let frame = CGRect(x: colum * width, y: row * height, width: width, height: height)
                 letterButton.frame = frame
