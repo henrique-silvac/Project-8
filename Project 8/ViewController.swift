@@ -24,6 +24,12 @@ class ViewController: UIViewController {
     }
     var level = 1
     
+    var hiddenButtons = 0 {
+        didSet {
+            print("Hidden buttons: \(hiddenButtons)")
+        }
+    }
+    
     override func loadView() {
         view = UIView()
         view.backgroundColor = .white
@@ -74,6 +80,9 @@ class ViewController: UIViewController {
         let buttonsView = UIView()
         buttonsView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(buttonsView)
+        
+        buttonsView.layer.borderWidth = 1
+        buttonsView.layer.borderColor = UIColor.lightGray.cgColor
         
         NSLayoutConstraint.activate([
             scoreLabel.topAnchor.constraint(equalTo: view.layoutMarginsGuide.topAnchor),
@@ -126,7 +135,7 @@ class ViewController: UIViewController {
             }
         }
     }
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -134,6 +143,7 @@ class ViewController: UIViewController {
     }
     
     @objc func letterTapped(_ sender: UIButton) {
+        hiddenButtons += 1
         guard let buttonTitle = sender.titleLabel?.text else { return }
         
         currentAnswer.text = currentAnswer.text?.appending(buttonTitle)
@@ -154,11 +164,50 @@ class ViewController: UIViewController {
             currentAnswer.text = ""
             score += 1
             
-            if score % 7 == 0 {
-                let ac = UIAlertController(title: "Well done!", message: "Are you ready for the next level?", preferredStyle: .alert)
-                ac.addAction(UIAlertAction(title: "Let's go!", style: .default, handler: levelUp))
-                present(ac, animated: true)
+            if hiddenButtons >= 20 {
+                if score % 7 == 0 {
+                    let ac = UIAlertController(title: "Well done!", message: "Are you ready for the next level?", preferredStyle: .alert)
+                    ac.addAction(UIAlertAction(title: "Let's go!", style: .default, handler: levelUp))
+                    present(ac, animated: true)
+                } else if score >= 5 {
+                    let passAlertController = UIAlertController(title: "Not bad!", message: "You can proceed or repeat the level!", preferredStyle: .alert)
+                    passAlertController.addAction(UIAlertAction(title: "Next level!", style: .default, handler: levelUp))
+                    passAlertController.addAction(UIAlertAction(title: "Let's stay here!", style: .cancel, handler: nil))
+                    present(passAlertController, animated: true)
+                } else if score < 5 {
+                    let failureAlertController = UIAlertController(title: "Not good enough!", message: "Please try again", preferredStyle: .alert)
+                    failureAlertController.addAction(UIAlertAction(title: "Restart", style: .default, handler: restartLevel))
+                    present(failureAlertController, animated: true)
+                }
             }
+        } else if answerText != "" {
+            score -= 1
+            let errorAlertController = UIAlertController(title: "Oops, that's not correct!", message: "Please, try again...", preferredStyle: .alert)
+            
+            errorAlertController.addAction(UIAlertAction(title: "OK", style: .default) {
+                [weak currentAnswer] _ in
+                currentAnswer?.text = ""
+                
+                for button in self.activatedButtons {
+                    button.isHidden = false
+                }
+                
+                self.activatedButtons.removeAll()
+            })
+            present(errorAlertController, animated: true)
+        }
+    }
+    
+    func restartLevel(action: UIAlertAction) {
+        solutions.removeAll(keepingCapacity: true)
+        loadLevel()
+        showLetterButtons()
+    }
+    
+    func showLetterButtons() {
+        for button in letterButtons {
+            button.isHidden = false
+            hiddenButtons -= 1
         }
     }
     
@@ -175,7 +224,7 @@ class ViewController: UIViewController {
     
     @objc func clearTapped(_ sender: UIButton) {
         currentAnswer.text = ""
-        
+        hiddenButtons -= 1
         for button in activatedButtons {
             button.isHidden = false
         }
@@ -187,6 +236,7 @@ class ViewController: UIViewController {
         var clueString = ""
         var solutionString = ""
         var letterBits = [String]()
+        score = 0
         
         if let levelFileURL = Bundle.main.url(forResource: "level\(level)", withExtension: "txt") {
             if let levelContents = try? String(contentsOf: levelFileURL) {
